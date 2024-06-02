@@ -582,6 +582,7 @@ start() {
             exit 1
         fi
 
+<<<<<<< HEAD
         if [ "$qdrant_already_running" = false ]; then
             qdrant_executable="$gaianet_base_dir/bin/qdrant"
             if [ -f "$qdrant_executable" ]; then
@@ -591,6 +592,59 @@ start() {
                 qdrant_pid=$!
                 echo $qdrant_pid > $gaianet_base_dir/qdrant.pid
                 info "\n    Qdrant instance started with pid: $qdrant_pid"
+=======
+    cd $gaianet_base_dir
+    llamaedge_wasm="$gaianet_base_dir/rag-api-server.wasm"
+    if [ ! -f "$llamaedge_wasm" ]; then
+        printf "LlamaEdge wasm not found at $llamaedge_wasm\n"
+        exit 1
+    fi
+
+    # command to start LlamaEdge API Server
+    cd $gaianet_base_dir
+    cmd=(wasmedge --dir .:./dashboard \
+    --env PLUGIN_DEBUG=true \
+    --nn-preload default:GGML:AUTO:$chat_model_name \
+    --nn-preload embedding:GGML:AUTO:$embedding_model_name \
+    rag-api-server.wasm \
+    --model-name $chat_model_stem,$embedding_model_stem \
+    --ctx-size $chat_ctx_size,$embedding_ctx_size \
+    --prompt-template $prompt_type \
+    --rag-policy $rag_policy \
+    --qdrant-collection-name $embedding_collection_name \
+    --qdrant-limit $qdrant_limit \
+    --qdrant-score-threshold $qdrant_score_threshold \
+    --web-ui ./ \
+    --socket-addr 0.0.0.0:$llamaedge_port \
+    --log-prompts \
+    --log-stat)
+
+    # Add rag prompt if it exists
+    if [ -n "$rag_prompt" ]; then
+        cmd+=("--rag-prompt" "$rag_prompt")
+    fi
+
+    # Add reverse prompt if it exists
+    if [ -n "$reverse_prompt" ]; then
+        cmd+=("--reverse-prompt" "$reverse_prompt")
+    fi
+
+    printf "    Run the following command to start the LlamaEdge API Server:\n\n"
+    for i in "${cmd[@]}"; do
+        if [[ $i == *" "* ]]; then
+            printf "\"%s\" " "$i"
+        else
+            printf "%s " "$i"
+        fi
+    done
+    printf "\n\n"
+
+    if $use_supervise; then
+        cmd_string=""
+        for i in "${cmd[@]}"; do
+            if [[ $i == *" "* ]]; then
+                cmd_string+=\""$i"\"
+>>>>>>> upstream/debug-api-server
             else
                 error "    Qdrant binary not found at $qdrant_executable\n\n"
                 exit 1
